@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet - FastVTU</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #6c5ce7; --primary-dark: #5649c0; --secondary: #00d9ff; --success: #00b894; --danger: #ff4757; --warning: #ffa502; --dark: #2d3436; --light: #f5f6fa; --gray: #636e72; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light); }
+        header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 1rem 0; position: sticky; top: 0; z-index: 1000; }
+        nav { max-width: 1200px; margin: 0 auto; padding: 0 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .container { max-width: 800px; margin: 2rem auto; padding: 0 2rem; }
+        .balance-card { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 2rem; border-radius: 10px; text-align: center; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .balance-card h2 { margin-bottom: 1rem; opacity: 0.9; }
+        .balance-amount { font-size: 3rem; font-weight: bold; margin-bottom: 1rem; }
+        .balance-actions { display: flex; gap: 1rem; justify-content: center; }
+        .wallet-section { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .wallet-section h2 { color: var(--primary); margin-bottom: 1.5rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 5px; font-size: 1rem; }
+        .btn { background: var(--primary); color: white; padding: 0.75rem 2rem; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .history-list { max-height: 400px; overflow-y: auto; }
+        .history-item { padding: 1rem; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; }
+        .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--success); color: white; padding: 1rem 2rem; border-radius: 5px; transform: translateX(400px); transition: transform 0.3s; }
+        .toast.show { transform: translateX(0); }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">⚡ FastVTU</div>
+            <div class="nav-links">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="balance-card">
+            <h2>Wallet Balance</h2>
+            <div class="balance-amount" id="walletBalance">Loading...</div>
+            <div class="balance-actions">
+                <button class="btn" onclick="showFundWallet()">Fund Wallet</button>
+                <button class="btn" onclick="showWithdraw()">Withdraw</button>
+            </div>
+        </div>
+
+        <div class="wallet-section" id="fundSection" style="display: none;">
+            <h2>Fund Wallet</h2>
+            <form id="fundForm">
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" id="fundAmount" placeholder="Enter amount" min="100" required>
+                </div>
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <select id="paymentMethod" required>
+                        <option value="">-- Select Method --</option>
+                        <option value="card">Debit/Credit Card</option>
+                        <option value="transfer">Bank Transfer</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn">Proceed to Payment</button>
+            </form>
+        </div>
+
+        <div class="wallet-section">
+            <h2>Transaction History</h2>
+            <div class="history-list" id="historyList">
+                <div style="text-align:center; padding: 1rem; color: #777;">Loading history...</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script src="main.js"></script>
+
+    <script>
+        // Check Auth
+        checkAuth();
+
+        // 2. Load Real Balance & History
+        async function loadWalletData() {
+            try {
+                // Fetch user profile/dashboard data
+                const data = await API.getDashboardData();
+               
+                if (data) {
+                    // Update Balance
+                    document.getElementById('walletBalance').textContent = new Intl.NumberFormat('en-NG', {
+                        style: 'currency', currency: 'NGN'
+                    }).format(data.balance);
+
+                    // Update History List
+                    const historyList = document.getElementById('historyList');
+                    if (data.recentTransactions && data.recentTransactions.length > 0) {
+                        historyList.innerHTML = data.recentTransactions.map(tx => `
+                            <div class="history-item">
+                                <div>
+                                    <div><strong>${tx.type || 'Transaction'}</strong></div>
+                                    <div style="color: #666; font-size: 0.9rem;">${tx.date || new Date().toLocaleDateString()}</div>
+                                </div>
+                                <div style="color: ${tx.status === 'success' ? 'var(--success)' : 'var(--danger)'}; font-weight: bold;">
+                                    ${tx.status === 'success' ? '+' : '-'}₦${(tx.amount || 0).toLocaleString()}
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        historyList.innerHTML = '<div style="text-align:center; padding: 1rem;">No transaction history found.</div>';
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading wallet data", error);
+                document.getElementById('walletBalance').textContent = "Error";
+            }
+        }
+       
+        // Load on start
+        loadWalletData();
+
+        // UI Toggles
+        function showFundWallet() {
+            const section = document.getElementById('fundSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function showWithdraw() {
+            showToast('Withdrawal feature is currently disabled.', 'warning');
+        }
+
+        // 3. Handle Funding (Real API Call)
+        document.getElementById('fundForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+           
+            const amount = document.getElementById('fundAmount').value;
+            const method = document.getElementById('paymentMethod').value;
+            const btn = e.target.querySelector('.btn');
+           
+            // Validation
+            if (!amount || amount < 100) { showToast('Minimum amount is ₦100', 'error'); return; }
+            if (!method) { showToast('Select a payment method', 'error'); return; }
+           
+            // Show loading
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+           
+            try {
+                // Call API
+                const response = await API.fundWallet(amount, method);
+               
+                if (response.success) {
+                    showToast(response.message); // e.g., "Funding successful!"
+                    loadWalletData(); // Refresh balance
+                    document.getElementById('fundForm').reset();
+                    document.getElementById('fundSection').style.display = 'none';
+                } else {
+                    showToast(response.message, 'error');
+                }
+            } catch (error) {
+                showToast('Connection error. Please try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Proceed to Payment';
+            }
+        });
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

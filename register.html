@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - FastVTU</title>
+    <style>
+        /* (Keep all your existing CSS exactly the same) */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #6c5ce7; --primary-dark: #5649c0; --secondary: #00d9ff; --success: #00b894; --danger: #ff4757; --warning: #ffa502; --dark: #2d3436; --light: #f5f6fa; --gray: #636e72; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .auth-container { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        .auth-header { text-align: center; margin-bottom: 2rem; }
+        .auth-header h1 { color: var(--primary); margin-bottom: 0.5rem; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: var(--dark); font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 5px; font-size: 1rem; transition: border-color 0.3s; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+        .btn { width: 100%; background: var(--primary); color: white; padding: 0.75rem; border: none; border-radius: 5px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .form-footer { text-align: center; margin-top: 1.5rem; color: var(--gray); }
+        .form-footer a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .loading-spinner { display: none; width: 20px; height: 20px; border: 2px solid transparent; border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
+        .btn.loading .loading-spinner { display: block; }
+        .btn.loading .btn-text { display: none; }
+        .password-strength { height: 4px; background: #ddd; border-radius: 2px; margin-top: 0.5rem; overflow: hidden; }
+        .password-strength-bar { height: 100%; width: 0; transition: all 0.3s; }
+        .password-strength-bar.weak { width: 33%; background: var(--danger); }
+        .password-strength-bar.medium { width: 66%; background: var(--warning); }
+        .password-strength-bar.strong { width: 100%; background: var(--success); }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--success); color: white; padding: 1rem 2rem; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transform: translateX(400px); transition: transform 0.3s; z-index: 2000; }
+        .toast.show { transform: translateX(0); }
+        .toast.error { background: var(--danger); }
+        @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-header">
+            <h1>Create Account</h1>
+            <p>Join thousands of satisfied customers</p>
+        </div>
+       
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" required placeholder="Choose a unique username">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="firstName">First Name</label>
+                    <input type="text" id="firstName" required placeholder="Enter first name">
+                </div>
+               
+                <div class="form-group">
+                    <label for="lastName">Last Name</label>
+                    <input type="text" id="lastName" required placeholder="Enter last name">
+                </div>
+            </div>
+           
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" required placeholder="Enter your email">
+            </div>
+           
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" required placeholder="08012345678">
+            </div>
+           
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="Create a password">
+                    <div class="password-strength">
+                        <div class="password-strength-bar" id="passwordStrengthBar"></div>
+                    </div>
+                </div>
+               
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" required placeholder="Confirm password">
+                </div>
+            </div>
+           
+            <div class="form-group">
+                <label for="referral">Referral Code (Optional)</label>
+                <input type="text" id="referral" placeholder="Enter referral code">
+            </div>
+           
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="terms" required>
+                    I agree to the <a href="#">Terms & Conditions</a>
+                </label>
+            </div>
+           
+            <button type="submit" class="btn" id="registerBtn">
+                <div class="loading-spinner"></div>
+                <span class="btn-text">Create Account</span>
+            </button>
+        </form>
+       
+        <div class="form-footer">
+            Already have an account? <a href="login.html">Login</a>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script src="main.js"></script>
+
+    <script>
+        // Password strength checker (Kept same as before)
+        document.getElementById('password').addEventListener('input', function(e) {
+            const password = e.target.value;
+            const strengthBar = document.getElementById('passwordStrengthBar');
+            const hasUpperCase = /[A-Z]/.test(password);
+            const hasLowerCase = /[a-z]/.test(password);
+            const hasNumbers = /\d/.test(password);
+            const hasSpecialChar = /[!@#$%^&*]/.test(password);
+            const isLongEnough = password.length >= 8;
+            const strength = [hasUpperCase, hasLowerCase, hasNumbers, hasSpecialChar, isLongEnough].filter(Boolean).length;
+            strengthBar.className = 'password-strength-bar';
+            if (password.length > 0) {
+                if (strength <= 2) strengthBar.classList.add('weak');
+                else if (strength <= 4) strengthBar.classList.add('medium');
+                else strengthBar.classList.add('strong');
+            }
+        });
+
+        // Registration form handler
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+           
+            const registerBtn = document.getElementById('registerBtn');
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // 2. Data Preparation for Django (Snake Case)
+            const userData = {
+                username: document.getElementById('username').value, // New Field
+                first_name: document.getElementById('firstName').value, // Changed to snake_case
+                last_name: document.getElementById('lastName').value,   // Changed to snake_case
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                password: password,
+                // referral: document.getElementById('referral').value // Uncomment if your backend handles this
+            };
+
+            // Basic Validation
+            if (password !== confirmPassword) {
+                showToast('Passwords do not match', 'error');
+                return;
+            }
+           
+            // Show loading
+            registerBtn.classList.add('loading');
+            registerBtn.disabled = true;
+           
+            try {
+                // 3. Call Real API
+                const response = await API.register(userData);
+               
+                if (response.success) {
+                    showToast('Registration successful! Redirecting to login...');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                } else {
+                    // Show error from backend (e.g. "Username already taken")
+                    showToast(response.message || 'Registration failed', 'error');
+                }
+            } catch (error) {
+                showToast('Network error. Please try again.', 'error');
+            } finally {
+                registerBtn.classList.remove('loading');
+                registerBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

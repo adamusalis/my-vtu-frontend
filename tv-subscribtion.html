@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Subscription - FastVTU</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #6c5ce7; --primary-dark: #5649c0; --secondary: #00d9ff; --success: #00b894; --danger: #ff4757; --warning: #ffa502; --dark: #2d3436; --light: #f5f6fa; --gray: #636e72; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light); }
+        header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 1rem 0; position: sticky; top: 0; z-index: 1000; }
+        nav { max-width: 1200px; margin: 0 auto; padding: 0 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a { color: white; text-decoration: none; font-weight: 500; transition: opacity 0.3s; }
+        .container { max-width: 800px; margin: 2rem auto; padding: 0 2rem; }
+        .page-header { background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .balance-display { background: linear-gradient(135deg, var(--success), #00a085); color: white; padding: 1rem; border-radius: 8px; text-align: center; margin-bottom: 1rem; }
+        .balance-display .amount { font-size: 2rem; font-weight: bold; }
+        .purchase-form { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: var(--dark); font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 5px; font-size: 1rem; }
+        .bouquet-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+        .option-card { padding: 1.5rem; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s; text-align: center; position: relative; }
+        .option-card:hover { border-color: var(--primary); }
+        .option-card.selected { border-color: var(--primary); background: rgba(108, 92, 231, 0.1); }
+        .btn { width: 100%; background: var(--primary); color: white; padding: 0.75rem; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--success); color: white; padding: 1rem 2rem; border-radius: 5px; transform: translateX(400px); transition: transform 0.3s; }
+        .toast.show { transform: translateX(0); }
+        .toast.error { background: var(--danger); }
+        @media (max-width: 768px) { .nav-links a:not(.btn) { display: none; } }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">⚡ FastVTU</div>
+            <div class="nav-links">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="buy-airtime.html">Airtime</a>
+                <a href="buy-data.html">Data</a>
+                <a href="wallet.html">Wallet</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>TV Subscription</h1>
+            <p>Renew your cable TV subscription</p>
+        </div>
+
+        <div class="balance-display">
+            <h3>Available Balance</h3>
+            <div class="amount" id="userBalance">Loading...</div>
+        </div>
+
+        <div class="purchase-form">
+            <form id="tvForm">
+                <div class="form-group">
+                    <label>Select Provider</label>
+                    <select id="provider" required>
+                        <option value="">-- Select Provider --</option>
+                        <option value="dstv">DSTV</option>
+                        <option value="gotv">GOTV</option>
+                        <option value="startimes">Startimes</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="smartcard">Smartcard/IUC Number</label>
+                    <input type="text" id="smartcard" required placeholder="Enter smartcard number">
+                </div>
+
+                <div class="form-group">
+                    <label>Select Bouquet</label>
+                    <div class="bouquet-options" id="bouquetOptions">
+                        <div style="color:#888; grid-column: 1/-1; text-align:center;">Select a provider to see packages</div>
+                    </div>
+                    <input type="hidden" id="bouquet" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="pin">Transaction PIN</label>
+                    <input type="password" id="pin" required maxlength="4" pattern="[0-9]{4}" placeholder="****">
+                </div>
+
+                <button type="submit" class="btn" id="subscribeBtn">
+                    <span>Subscribe Now</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script src="main.js"></script>
+
+    <script>
+        checkAuth();
+
+        // Load Balance
+        async function loadBalance() {
+            const data = await API.getDashboardData();
+            if (data) {
+                document.getElementById('userBalance').textContent = new Intl.NumberFormat('en-NG', {
+                    style: 'currency', currency: 'NGN'
+                }).format(data.balance);
+            }
+        }
+        loadBalance();
+
+        // Hardcoded Plans (Matches your original list)
+        const bouquets = {
+            dstv: [
+                { id: 'dstv-padi', name: 'Padi', price: 2150, months: 1 },
+                { id: 'dstv-yanga', name: 'Yanga', price: 3550, months: 1 },
+                { id: 'dstv-confam', name: 'Confam', price: 5300, months: 1 },
+                { id: 'dstv-compact', name: 'Compact', price: 9000, months: 1, popular: true },
+                { id: 'dstv-compact-plus', name: 'Compact Plus', price: 14250, months: 1 },
+                { id: 'dstv-premium', name: 'Premium', price: 21000, months: 1 }
+            ],
+            gotv: [
+                { id: 'gotv-smallie', name: 'Smallie', price: 1100, months: 1 },
+                { id: 'gotv-jolli', name: 'Jolli', price: 3300, months: 1, popular: true },
+                { id: 'gotv-max', name: 'Max', price: 4900, months: 1 },
+                { id: 'gotv-supreme', name: 'Supreme', price: 7600, months: 1 }
+            ],
+            startimes: [
+                { id: 'startimes-basic', name: 'Basic', price: 1850, months: 1 },
+                { id: 'startimes-smart', name: 'Smart', price: 2600, months: 1 },
+                { id: 'startimes-classic', name: 'Classic', price: 3800, months: 1, popular: true },
+                { id: 'startimes-super', name: 'Super', price: 6800, months: 1 }
+            ]
+        };
+
+        // Provider change handler
+        document.getElementById('provider').addEventListener('change', (e) => {
+            const provider = e.target.value;
+            const optionsContainer = document.getElementById('bouquetOptions');
+            const bouquetInput = document.getElementById('bouquet');
+           
+            if (!provider) {
+                optionsContainer.innerHTML = '';
+                return;
+            }
+
+            const plans = bouquets[provider] || [];
+            optionsContainer.innerHTML = plans.map(bouquet => `
+                <div class="option-card" data-bouquet="${bouquet.id}" data-price="${bouquet.price}">
+                    ${bouquet.popular ? '<div style="position: absolute; top: -10px; right: 10px; background: var(--warning); color: white; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: bold;">POPULAR</div>' : ''}
+                    <div style="font-weight: bold; margin-bottom: 0.5rem;">${bouquet.name}</div>
+                    <div style="font-size: 1.2rem; color: var(--success); font-weight: bold;">₦${bouquet.price.toLocaleString()}</div>
+                    <div style="font-size: 0.85rem; color: var(--gray);">${bouquet.months} month${bouquet.months > 1 ? 's' : ''}</div>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            document.querySelectorAll('.option-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    bouquetInput.value = card.dataset.bouquet;
+                });
+            });
+        });
+
+        // Form submission
+        document.getElementById('tvForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+           
+            const provider = document.getElementById('provider').value;
+            const smartcard = document.getElementById('smartcard').value;
+            const bouquet = document.getElementById('bouquet').value;
+            const pin = document.getElementById('pin').value;
+            const btn = document.getElementById('subscribeBtn');
+           
+            if (!provider || !smartcard || !bouquet || !pin) {
+                showToast('Please fill all fields', 'error');
+                return;
+            }
+           
+            // Show loading
+            btn.disabled = true;
+            btn.innerHTML = 'Processing...';
+           
+            try {
+                // Call Real API
+                const response = await API.purchaseTV(provider, smartcard, bouquet, pin);
+               
+                if (response.success) {
+                    showToast(`${provider.toUpperCase()} subscription successful!`);
+                    loadBalance(); // Update balance
+                    document.getElementById('tvForm').reset();
+                    document.getElementById('bouquetOptions').innerHTML = '';
+                } else {
+                    showToast(response.message || 'Transaction failed', 'error');
+                }
+            } catch (error) {
+                showToast('Network error', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Subscribe Now';
+            }
+        });
+
+        // Auto-format smartcard
+        document.getElementById('smartcard').addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

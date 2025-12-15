@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transactions - FastVTU</title>
+    <style>
+        /* (CSS remains exactly the same) */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #6c5ce7; --primary-dark: #5649c0; --secondary: #00d9ff; --success: #00b894; --danger: #ff4757; --warning: #ffa502; --dark: #2d3436; --light: #f5f6fa; --gray: #636e72; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light); }
+        header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 1rem 0; position: sticky; top: 0; z-index: 1000; }
+        nav { max-width: 1200px; margin: 0 auto; padding: 0 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: white; text-decoration: none; }
+        .nav-links a { color: white; text-decoration: none; margin-left: 20px; font-weight: 500; }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 2rem; }
+        .filters { background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+        .filters input, .filters select { padding: 0.5rem; border: 1px solid #ddd; border-radius: 5px; }
+        .btn { padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .transaction-list { background: white; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); overflow: hidden; min-height: 200px; }
+        .transaction-item { padding: 1.5rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .transaction-item:last-child { border-bottom: none; }
+        .transaction-info h3 { margin-bottom: 0.5rem; color: var(--dark); font-size: 1.1rem; }
+        .transaction-meta { font-size: 0.85rem; color: var(--gray); }
+        .transaction-amount { font-weight: bold; font-size: 1.2rem; }
+        .status-badge { padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
+        .status-badge.success { background: rgba(0, 184, 148, 0.1); color: var(--success); }
+        .status-badge.pending { background: rgba(255, 165, 2, 0.1); color: var(--warning); }
+        .status-badge.failed { background: rgba(255, 71, 87, 0.1); color: var(--danger); }
+        .empty-state { padding: 3rem; text-align: center; color: #888; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="index.html" class="logo">⚡ FastVTU</a>
+            <div class="nav-links">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h1 style="margin-bottom: 2rem; color: var(--dark);">Transaction History</h1>
+       
+        <div class="filters">
+            <input type="date" id="dateFilter">
+            <select id="typeFilter">
+                <option value="">All Types</option>
+                <option value="airtime">Airtime</option>
+                <option value="data">Data</option>
+                <option value="deposit">Funding</option>
+            </select>
+            <button class="btn" onclick="filterTransactions()">Filter</button>
+        </div>
+
+        <div class="transaction-list" id="transactionList">
+            <div class="empty-state">Loading transactions...</div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+
+    <script>
+        // Check Auth
+        checkAuth();
+
+        let allTransactions = []; // Store fetched data here
+
+        // 2. Load Real Transactions
+        async function loadTransactions() {
+            const container = document.getElementById('transactionList');
+           
+            try {
+                // Call API
+                const transactions = await API.getTransactions();
+                allTransactions = transactions; // Save for filtering
+
+                renderList(allTransactions);
+
+            } catch (error) {
+                container.innerHTML = '<div class="empty-state" style="color:red">Failed to load history.</div>';
+            }
+        }
+
+        // Render Helper
+        function renderList(list) {
+            const container = document.getElementById('transactionList');
+           
+            if (list.length === 0) {
+                container.innerHTML = '<div class="empty-state">No transactions found.</div>';
+                return;
+            }
+
+            container.innerHTML = list.map(tx => {
+                // Determine formatting based on data
+                const isFunding = tx.transaction_type === 'deposit' || tx.type === 'deposit';
+                const amountClass = isFunding ? 'var(--success)' : 'var(--dark)';
+                const sign = isFunding ? '+' : '-';
+                const status = tx.status || 'pending';
+                const date = new Date(tx.created_at || tx.date).toLocaleString();
+
+                return `
+                <div class="transaction-item">
+                    <div class="transaction-info">
+                        <h3>${tx.description || tx.type || 'Transaction'}</h3>
+                        <div class="transaction-meta">
+                            ${date} • Ref: ${tx.reference || tx.id}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="transaction-amount" style="color: ${amountClass}">
+                            ${sign}₦${parseFloat(tx.amount).toLocaleString()}
+                        </div>
+                        <div class="status-badge ${status.toLowerCase()}">
+                            ${status}
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // 3. Simple Client-Side Filtering
+        function filterTransactions() {
+            const type = document.getElementById('typeFilter').value.toLowerCase();
+            const date = document.getElementById('dateFilter').value;
+
+            const filtered = allTransactions.filter(tx => {
+                // Filter by Type
+                const txType = (tx.transaction_type || tx.type || '').toLowerCase();
+                const matchesType = !type || txType.includes(type);
+
+                // Filter by Date (simple string match for YYYY-MM-DD)
+                const txDate = (tx.created_at || tx.date || '').substring(0, 10);
+                const matchesDate = !date || txDate === date;
+
+                return matchesType && matchesDate;
+            });
+
+            renderList(filtered);
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        // Run on load
+        document.addEventListener('DOMContentLoaded', loadTransactions);
+    </script>
+</body>
+</html>

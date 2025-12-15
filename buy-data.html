@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy Data - FastVTU</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #6c5ce7; --primary-dark: #5649c0; --secondary: #00d9ff; --success: #00b894; --danger: #ff4757; --warning: #ffa502; --dark: #2d3436; --light: #f5f6fa; --gray: #636e72; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light); }
+        header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 1rem 0; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        nav { max-width: 1200px; margin: 0 auto; padding: 0 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a { color: white; text-decoration: none; font-weight: 500; transition: opacity 0.3s; }
+        .nav-links a:hover { opacity: 0.8; }
+        .container { max-width: 800px; margin: 2rem auto; padding: 0 2rem; }
+        .page-header { background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .page-header h1 { color: var(--primary); margin-bottom: 0.5rem; }
+        .balance-display { background: linear-gradient(135deg, var(--success), #00a085); color: white; padding: 1rem; border-radius: 8px; text-align: center; margin-bottom: 1rem; }
+        .balance-display h3 { margin-bottom: 0.5rem; opacity: 0.9; }
+        .balance-display .amount { font-size: 2rem; font-weight: bold; }
+        .purchase-form { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: var(--dark); font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 5px; font-size: 1rem; transition: border-color 0.3s; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+        .network-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; }
+        .network-option { padding: 1rem; border: 2px solid #ddd; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .network-option:hover { border-color: var(--primary); }
+        .network-option.selected { border-color: var(--primary); background: rgba(108, 92, 231, 0.1); }
+        .data-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+        .plan-card { padding: 1.5rem; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s; position: relative; }
+        .plan-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .plan-card.selected { border-color: var(--primary); background: rgba(108, 92, 231, 0.1); }
+        .plan-card .popular { position: absolute; top: -10px; right: 10px; background: var(--warning); color: white; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: bold; }
+        .plan-name { font-weight: bold; margin-bottom: 0.5rem; color: var(--dark); }
+        .plan-size { font-size: 1.2rem; color: var(--primary); margin-bottom: 0.5rem; }
+        .plan-price { font-size: 1.5rem; font-weight: bold; color: var(--success); }
+        .plan-validity { font-size: 0.85rem; color: var(--gray); margin-top: 0.5rem; }
+        .btn { width: 100%; background: var(--primary); color: white; padding: 0.75rem; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; transition: all 0.3s; font-size: 1rem; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .loading-spinner { display: none; width: 20px; height: 20px; border: 2px solid transparent; border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
+        .btn.loading .loading-spinner { display: block; }
+        .btn.loading .btn-text { display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--success); color: white; padding: 1rem 2rem; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transform: translateX(400px); transition: transform 0.3s; z-index: 2000; }
+        .toast.show { transform: translateX(0); }
+        .toast.error { background: var(--danger); }
+        @media (max-width: 768px) { .container { padding: 1rem; } .nav-links a:not(.btn) { display: none; } }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">⚡ FastVTU</div>
+            <div class="nav-links">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="buy-airtime.html">Airtime</a>
+                <a href="buy-data.html">Data</a>
+                <a href="wallet.html">Wallet</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Buy Data Plans</h1>
+            <p>Affordable data for all networks</p>
+        </div>
+
+        <div class="balance-display">
+            <h3>Available Balance</h3>
+            <div class="amount" id="userBalance">Loading...</div>
+        </div>
+
+        <div class="purchase-form">
+            <form id="dataForm">
+                <div class="form-group">
+                    <label>Select Network</label>
+                    <div class="network-selector" id="networkSelector">
+                        <div class="network-option" data-network="mtn">
+                            <div style="width: 40px; height: 40px; background: #ffcc00; border-radius: 50%; margin: 0 auto 0.5rem; display: flex; align-items: center; justify-content: center; font-weight: bold; color: black;">MTN</div>
+                            <div>MTN</div>
+                        </div>
+                        <div class="network-option" data-network="airtel">
+                            <div style="width: 40px; height: 40px; background: #ff0000; border-radius: 50%; margin: 0 auto 0.5rem; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">A</div>
+                            <div>Airtel</div>
+                        </div>
+                        <div class="network-option" data-network="glo">
+                            <div style="width: 40px; height: 40px; background: #00a651; border-radius: 50%; margin: 0 auto 0.5rem; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">G</div>
+                            <div>Glo</div>
+                        </div>
+                        <div class="network-option" data-network="9mobile">
+                            <div style="width: 40px; height: 40px; background: #006bad; border-radius: 50%; margin: 0 auto 0.5rem; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">9</div>
+                            <div>9mobile</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="network" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" required placeholder="08012345678" maxlength="11">
+                </div>
+
+                <div class="form-group">
+                    <label>Select Data Plan</label>
+                    <div class="data-plans" id="dataPlans">
+                        <div style="text-align:center; color: #666; grid-column: 1/-1;">Select a network to see plans</div>
+                    </div>
+                    <input type="hidden" id="plan" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="pin">Transaction PIN (4 digits)</label>
+                    <input type="password" id="pin" required placeholder="Enter PIN" maxlength="4" pattern="[0-9]{4}">
+                </div>
+
+                <button type="submit" class="btn" id="purchaseBtn">
+                    <div class="loading-spinner"></div>
+                    <span class="btn-text">Purchase Data</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script src="main.js"></script>
+
+    <script>
+        // Check Auth
+        checkAuth();
+
+        // 2. Load Real Balance
+        async function loadBalance() {
+            try {
+                const data = await API.getDashboardData();
+                if (data) {
+                    document.getElementById('userBalance').textContent = new Intl.NumberFormat('en-NG', {
+                        style: 'currency', currency: 'NGN'
+                    }).format(data.balance);
+                }
+            } catch(e) { console.error("Balance Load Error", e); }
+        }
+        loadBalance();
+
+        // 3. Static Data Plans (Frontend Only for now)
+        // Note: In a full app, these should ideally come from the backend database.
+        const dataPlans = {
+            mtn: [
+                { id: 'mtn-1GB', name: 'Small Bundle', size: '1GB', price: 300, validity: '30 days', popular: false },
+                { id: 'mtn-2GB', name: 'Monthly Bundle', size: '2GB', price: 500, validity: '30 days', popular: true },
+                { id: 'mtn-5GB', name: 'Mega Bundle', size: '5GB', price: 1000, validity: '30 days', popular: false },
+                { id: 'mtn-10GB', name: 'Super Bundle', size: '10GB', price: 2000, validity: '30 days', popular: false }
+            ],
+            airtel: [
+                { id: 'airtel-1.5GB', name: 'Basic Plan', size: '1.5GB', price: 500, validity: '30 days', popular: false },
+                { id: 'airtel-3GB', name: 'Smart Plan', size: '3GB', price: 1000, validity: '30 days', popular: true },
+                { id: 'airtel-7GB', name: 'Mega Plan', size: '7GB', price: 2000, validity: '30 days', popular: false }
+            ],
+            glo: [
+                { id: 'glo-2GB', name: 'Starter', size: '2GB', price: 500, validity: '30 days', popular: false },
+                { id: 'glo-4.5GB', name: 'Regular', size: '4.5GB', price: 1000, validity: '30 days', popular: true },
+                { id: 'glo-12GB', name: 'Jumbo', size: '12GB', price: 2500, validity: '30 days', popular: false }
+            ],
+            '9mobile': [
+                { id: '9mobile-1GB', name: 'Lite', size: '1GB', price: 500, validity: '30 days', popular: false },
+                { id: '9mobile-2GB', name: 'Standard', size: '2GB', price: 1000, validity: '30 days', popular: true },
+                { id: '9mobile-5GB', name: 'Premium', size: '5GB', price: 2000, validity: '30 days', popular: false }
+            ]
+        };
+
+        // Network Selection Logic
+        const networkOptions = document.querySelectorAll('.network-option');
+        const networkInput = document.getElementById('network');
+        const dataPlansContainer = document.getElementById('dataPlans');
+       
+        networkOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                networkOptions.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                const network = option.dataset.network;
+                networkInput.value = network;
+                loadDataPlans(network);
+            });
+        });
+
+        // Load Plans into UI
+        function loadDataPlans(network) {
+            const plans = dataPlans[network] || [];
+            const planInput = document.getElementById('plan');
+           
+            dataPlansContainer.innerHTML = plans.map(plan => `
+                <div class="plan-card" data-plan-id="${plan.id}" data-price="${plan.price}">
+                    ${plan.popular ? '<div class="popular">POPULAR</div>' : ''}
+                    <div class="plan-name">${plan.name}</div>
+                    <div class="plan-size">${plan.size}</div>
+                    <div class="plan-price">₦${plan.price.toLocaleString()}</div>
+                    <div class="plan-validity">${plan.validity}</div>
+                </div>
+            `).join('');
+           
+            // Add click handlers for plans
+            document.querySelectorAll('.plan-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    planInput.value = card.dataset.planId;
+                });
+            });
+        }
+
+        // 4. Submit Form to Real Backend
+        document.getElementById('dataForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+           
+            const network = document.getElementById('network').value;
+            const phone = document.getElementById('phone').value;
+            const planId = document.getElementById('plan').value;
+            const pin = document.getElementById('pin').value;
+            const purchaseBtn = document.getElementById('purchaseBtn');
+           
+            // Basic Validation
+            if (!network) { showToast('Please select a network', 'error'); return; }
+            if (!phone || phone.length !== 11) { showToast('Invalid phone number', 'error'); return; }
+            if (!planId) { showToast('Please select a data plan', 'error'); return; }
+            if (!pin) { showToast('Enter your PIN', 'error'); return; }
+
+            // Show loading
+            purchaseBtn.classList.add('loading');
+            purchaseBtn.disabled = true;
+           
+            try {
+                // Call API
+                const response = await API.buyData(network, phone, planId);
+               
+                if (response.success) {
+                    showToast("Data sent successfully!");
+                    loadBalance(); // Refresh balance
+                    document.getElementById('dataForm').reset();
+                    dataPlansContainer.innerHTML = '<div style="text-align:center; color: #666; grid-column: 1/-1;">Select a network to see plans</div>';
+                    networkOptions.forEach(opt => opt.classList.remove('selected'));
+                } else {
+                    showToast(response.message || 'Purchase failed', 'error');
+                }
+            } catch (error) {
+                showToast('Network error. Check connection.', 'error');
+            } finally {
+                purchaseBtn.classList.remove('loading');
+                purchaseBtn.disabled = false;
+            }
+        });
+
+        // Auto-format phone
+        document.getElementById('phone').addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 11) value = value.slice(0, 11);
+            e.target.value = value;
+        });
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy Airtime - FastVTU</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #6c5ce7; --primary-dark: #5649c0; --secondary: #00d9ff; --success: #00b894; --danger: #ff4757; --warning: #ffa502; --dark: #2d3436; --light: #f5f6fa; --gray: #636e72; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light); }
+        header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 1rem 0; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        nav { max-width: 1200px; margin: 0 auto; padding: 0 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a { color: white; text-decoration: none; font-weight: 500; transition: opacity 0.3s; }
+        .nav-links a:hover { opacity: 0.8; }
+        .container { max-width: 800px; margin: 2rem auto; padding: 0 2rem; }
+        .page-header { background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .page-header h1 { color: var(--primary); margin-bottom: 0.5rem; }
+        .balance-display { background: linear-gradient(135deg, var(--success), #00a085); color: white; padding: 1rem; border-radius: 8px; text-align: center; margin-bottom: 1rem; }
+        .balance-display h3 { margin-bottom: 0.5rem; opacity: 0.9; }
+        .balance-display .amount { font-size: 2rem; font-weight: bold; }
+        .purchase-form { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: var(--dark); font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 5px; font-size: 1rem; transition: border-color 0.3s; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+        .network-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; }
+        .network-option { padding: 1rem; border: 2px solid #ddd; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .network-option:hover { border-color: var(--primary); }
+        .network-option.selected { border-color: var(--primary); background: rgba(108, 92, 231, 0.1); }
+        .amount-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 0.5rem; }
+        .amount-btn { padding: 0.75rem; border: 2px solid #ddd; background: white; border-radius: 5px; cursor: pointer; transition: all 0.3s; font-weight: 600; }
+        .amount-btn:hover { border-color: var(--primary); }
+        .amount-btn.selected { border-color: var(--primary); background: var(--primary); color: white; }
+        .btn { width: 100%; background: var(--primary); color: white; padding: 0.75rem; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; transition: all 0.3s; font-size: 1rem; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .loading-spinner { display: none; width: 20px; height: 20px; border: 2px solid transparent; border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
+        .btn.loading .loading-spinner { display: block; }
+        .btn.loading .btn-text { display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--success); color: white; padding: 1rem 2rem; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transform: translateX(400px); transition: transform 0.3s; z-index: 2000; }
+        .toast.show { transform: translateX(0); }
+        .toast.error { background: var(--danger); }
+        @media (max-width: 768px) { .container { padding: 1rem; } .network-selector { grid-template-columns: repeat(2, 1fr); } .nav-links a:not(.btn) { display: none; } }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">⚡ FastVTU</div>
+            <div class="nav-links">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="buy-airtime.html">Airtime</a>
+                <a href="buy-data.html">Data</a>
+                <a href="wallet.html">Wallet</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Buy Airtime</h1>
+            <p>Instant recharge for all networks</p>
+        </div>
+
+        <div class="balance-display">
+            <h3>Available Balance</h3>
+            <div class="amount" id="userBalance">Loading...</div>
+        </div>
+
+        <div class="purchase-form">
+            <form id="airtimeForm">
+                <div class="form-group">
+                    <label>Select Network</label>
+                    <div class="network-selector" id="networkSelector">
+                        <div class="network-option" data-network="MTN">
+                            <div style="width: 40px; height: 40px; background: #ffcc00; border-radius: 50%; margin: 0 auto 0.5rem; display: flex; align-items: center; justify-content: center; font-weight: bold; color: black;">MTN</div>
+                            <div>MTN</div>
+                        </div>
+                        <div class="network-option" data-network="AIRTEL">
+                            <div style="width: 40px; height: 40px; background: #ff0000; border-radius: 50%; margin: 0 auto 0.5rem; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">A</div>
+                            <div>Airtel</div>
+                        </div>
+                        <div class="network-option" data-network="GLO">
+                            <div style="width: 40px; height: 40px; background: #00a651; border-radius: 50%; margin: 0 auto 0.5rem; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">G</div>
+                            <div>Glo</div>
+                        </div>
+                        <div class="network-option" data-network="9MOBILE">
+                            <div style="width: 40px; height: 40px; background: #006bad; border-radius: 50%; margin: 0 auto 0.5rem; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">9</div>
+                            <div>9mobile</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="network" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" required placeholder="08012345678" maxlength="11">
+                </div>
+
+                <div class="form-group">
+                    <label>Amount</label>
+                    <div class="amount-options" id="amountOptions">
+                        <button type="button" class="amount-btn" data-amount="100">₦100</button>
+                        <button type="button" class="amount-btn" data-amount="200">₦200</button>
+                        <button type="button" class="amount-btn" data-amount="500">₦500</button>
+                        <button type="button" class="amount-btn" data-amount="1000">₦1,000</button>
+                        <button type="button" class="amount-btn" data-amount="2000">₦2,000</button>
+                        <button type="button" class="amount-btn" data-amount="5000">₦5,000</button>
+                    </div>
+                    <input type="number" id="amount" required placeholder="Or enter custom amount" style="margin-top: 1rem;">
+                </div>
+
+                <div class="form-group">
+                    <label for="pin">Transaction PIN (4 digits)</label>
+                    <input type="password" id="pin" required placeholder="Enter PIN" maxlength="4" pattern="[0-9]{4}">
+                </div>
+
+                <button type="submit" class="btn" id="purchaseBtn">
+                    <div class="loading-spinner"></div>
+                    <span class="btn-text">Purchase Airtime</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script src="main.js"></script>
+
+    <script>
+        // Check Auth
+        checkAuth();
+
+        // 2. Load User Balance (Async)
+        async function loadBalance() {
+            try {
+                const data = await API.getDashboardData();
+                if (data) {
+                    document.getElementById('userBalance').textContent = new Intl.NumberFormat('en-NG', {
+                        style: 'currency', currency: 'NGN'
+                    }).format(data.balance);
+                   
+                    // Update local storage too
+                    let user = JSON.parse(localStorage.getItem('user') || '{}');
+                    user.balance = data.balance;
+                    localStorage.setItem('user', JSON.stringify(user));
+                }
+            } catch(e) {
+                console.error("Could not fetch balance");
+            }
+        }
+        loadBalance();
+
+        // UI Logic (Network & Amount Selection) - Kept same
+        const networkOptions = document.querySelectorAll('.network-option');
+        const networkInput = document.getElementById('network');
+       
+        networkOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                networkOptions.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                networkInput.value = option.dataset.network;
+            });
+        });
+
+        const amountButtons = document.querySelectorAll('.amount-btn');
+        const amountInput = document.getElementById('amount');
+       
+        amountButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                amountButtons.forEach(btn => btn.classList.remove('selected'));
+                button.classList.add('selected');
+                amountInput.value = button.dataset.amount;
+            });
+        });
+
+        amountInput.addEventListener('input', () => {
+            amountButtons.forEach(btn => btn.classList.remove('selected'));
+        });
+
+        // 3. Form Submission (Real API Call)
+        document.getElementById('airtimeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+           
+            const network = document.getElementById('network').value;
+            const phone = document.getElementById('phone').value;
+            const amount = document.getElementById('amount').value;
+            const purchaseBtn = document.getElementById('purchaseBtn');
+           
+            // Validation
+            if (!network) { showToast('Please select a network', 'error'); return; }
+            if (!phone || phone.length !== 11) { showToast('Invalid phone number', 'error'); return; }
+            if (!amount || amount < 50) { showToast('Minimum amount is ₦50', 'error'); return; }
+
+            // Show loading
+            purchaseBtn.classList.add('loading');
+            purchaseBtn.disabled = true;
+           
+            try {
+                // Call the real API
+                const response = await API.buyAirtime(network, phone, amount);
+               
+                if (response.success) {
+                    showToast(response.message); // "Airtime sent successfully!"
+                    loadBalance(); // Refresh balance
+                    document.getElementById('airtimeForm').reset();
+                   
+                    // Optional: Redirect to transactions
+                    // setTimeout(() => window.location.href = 'transactions.html', 2000);
+                } else {
+                    showToast(response.message || 'Purchase failed', 'error');
+                }
+            } catch (error) {
+                showToast('Network error. Check connection.', 'error');
+            } finally {
+                purchaseBtn.classList.remove('loading');
+                purchaseBtn.disabled = false;
+            }
+        });
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

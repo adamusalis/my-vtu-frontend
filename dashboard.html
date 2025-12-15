@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FastVTU</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #6c5ce7; --primary-dark: #5649c0; --secondary: #00d9ff; --success: #00b894; --danger: #ff4757; --warning: #ffa502; --dark: #2d3436; --light: #f5f6fa; --gray: #636e72; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light); }
+        header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 1rem 0; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        nav { max-width: 1200px; margin: 0 auto; padding: 0 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a { color: white; text-decoration: none; font-weight: 500; transition: opacity 0.3s; }
+        .nav-links a:hover { opacity: 0.8; }
+        .user-menu { position: relative; }
+        .user-menu button { background: none; border: none; color: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; }
+        .dropdown { position: absolute; top: 100%; right: 0; background: white; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: none; min-width: 150px; margin-top: 0.5rem; }
+        .dropdown.show { display: block; }
+        .dropdown a { color: var(--dark); padding: 0.75rem 1rem; display: block; transition: background 0.3s; }
+        .dropdown a:hover { background: var(--light); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .stat-info h3 { color: var(--gray); font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .stat-info .value { font-size: 1.8rem; font-weight: bold; color: var(--dark); }
+        .stat-icon { font-size: 2.5rem; }
+        .stat-card.balance .stat-icon { color: var(--success); }
+        .stat-card.transactions .stat-icon { color: var(--primary); }
+        .stat-card.services .stat-icon { color: var(--warning); }
+        .quick-actions { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .quick-actions h2 { margin-bottom: 1.5rem; color: var(--primary); }
+        .actions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+        .action-card { padding: 1.5rem; border: 2px solid var(--light); border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.3s; text-decoration: none; color: var(--dark); }
+        .action-card:hover { border-color: var(--primary); background: var(--light); transform: translateY(-2px); }
+        .action-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .recent-transactions { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .recent-transactions h2 { margin-bottom: 1.5rem; color: var(--primary); display: flex; justify-content: space-between; align-items: center; }
+        .transaction-list { max-height: 400px; overflow-y: auto; }
+        .transaction-item { padding: 1rem; border-bottom: 1px solid var(--light); display: flex; justify-content: space-between; align-items: center; }
+        .transaction-item:last-child { border-bottom: none; }
+        .transaction-info { flex: 1; }
+        .transaction-type { font-weight: 600; color: var(--dark); }
+        .transaction-date { font-size: 0.85rem; color: var(--gray); }
+        .transaction-amount { font-weight: bold; }
+        .transaction-amount.success { color: var(--success); }
+        .transaction-amount.pending { color: var(--warning); }
+        .transaction-amount.failed { color: var(--danger); }
+        .btn { background: var(--secondary); color: white; padding: 0.5rem 1.5rem; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; transition: all 0.3s; text-decoration: none; display: inline-block; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .btn-primary { background: var(--primary); }
+        .empty-state { text-align: center; padding: 2rem; color: var(--gray); }
+        @media (max-width: 768px) { .nav-links a:not(.btn) { display: none; } .container { padding: 1rem; } .dashboard-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">⚡ FastVTU</div>
+            <div class="nav-links">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="buy-airtime.html">Airtime</a>
+                <a href="buy-data.html">Data</a>
+                <a href="wallet.html">Wallet</a>
+                <a href="transactions.html">Transactions</a>
+                <div class="user-menu">
+                    <button onclick="toggleUserMenu()">
+                        <span id="userName">Loading...</span> ▼
+                    </button>
+                    <div class="dropdown" id="userDropdown">
+                        <a href="profile.html">Profile</a>
+                        <a href="#" onclick="logout()">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="dashboard-grid">
+            <div class="stat-card balance">
+                <div class="stat-info">
+                    <h3>Wallet Balance</h3>
+                    <div class="value" id="userBalance">₦...</div>
+                </div>
+                <div class="stat-icon">💰</div>
+            </div>
+           
+            <div class="stat-card transactions">
+                <div class="stat-info">
+                    <h3>Total Transactions</h3>
+                    <div class="value" id="totalTransactions">0</div>
+                </div>
+                <div class="stat-icon">📊</div>
+            </div>
+           
+            <div class="stat-card services">
+                <div class="stat-info">
+                    <h3>Services Used</h3>
+                    <div class="value" id="servicesUsed">0</div>
+                </div>
+                <div class="stat-icon">⚡</div>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <h2>Quick Actions</h2>
+            <div class="actions-grid">
+                <a href="buy-airtime.html" class="action-card">
+                    <div class="action-icon">📱</div>
+                    <div>Buy Airtime</div>
+                </a>
+                <a href="buy-data.html" class="action-card">
+                    <div class="action-icon">🌐</div>
+                    <div>Buy Data</div>
+                </a>
+                <a href="tv-subscription.html" class="action-card">
+                    <div class="action-icon">📺</div>
+                    <div>TV Subscription</div>
+                </a>
+                <a href="electricity.html" class="action-card">
+                    <div class="action-icon">💡</div>
+                    <div>Pay Electricity</div>
+                </a>
+                <a href="wallet.html" class="action-card">
+                    <div class="action-icon">💳</div>
+                    <div>Fund Wallet</div>
+                </a>
+                <a href="profile.html" class="action-card">
+                    <div class="action-icon">👤</div>
+                    <div>Profile</div>
+                </a>
+            </div>
+        </div>
+
+        <div class="recent-transactions">
+            <h2>
+                Recent Transactions
+                <a href="transactions.html" class="btn btn-primary">View All</a>
+            </h2>
+            <div class="transaction-list" id="transactionList">
+                <div class="empty-state">
+                    <p>Loading transactions...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+
+    <script>
+        // Check authentication immediately
+        checkAuth();
+
+        // Load user name from local storage immediately (for better UX)
+        const cachedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (cachedUser.username || cachedUser.first_name) {
+            document.getElementById('userName').textContent = cachedUser.first_name || cachedUser.username;
+        }
+
+        // Toggle user menu
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.user-menu')) {
+                document.getElementById('userDropdown').classList.remove('show');
+            }
+        });
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
+
+        // 2. Load Real Dashboard Data
+        async function loadDashboardData() {
+            try {
+                // Call the API function from main.js
+                const data = await API.getDashboardData();
+               
+                if (data) {
+                    // Update Balance
+                    const formatter = new Intl.NumberFormat('en-NG', {
+                        style: 'currency', currency: 'NGN'
+                    });
+                    document.getElementById('userBalance').textContent = formatter.format(data.balance);
+                    document.getElementById('totalTransactions').textContent = data.totalTransactions;
+                    document.getElementById('servicesUsed').textContent = data.servicesUsed;
+
+                    // Update Transactions List
+                    const transactionList = document.getElementById('transactionList');
+                    if (data.recentTransactions && data.recentTransactions.length > 0) {
+                        transactionList.innerHTML = data.recentTransactions.map(tx => `
+                            <div class="transaction-item">
+                                <div class="transaction-info">
+                                    <div class="transaction-type">${tx.type || 'Transaction'}</div>
+                                    <div class="transaction-date">${tx.date || new Date().toLocaleDateString()}</div>
+                                </div>
+                                <div class="transaction-amount ${tx.status || 'success'}">
+                                    ₦${(tx.amount || 0).toLocaleString()}
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        transactionList.innerHTML = `
+                            <div class="empty-state">
+                                <p>No transactions yet</p>
+                                <a href="buy-airtime.html" class="btn">Make Your First Transaction</a>
+                            </div>`;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load dashboard data', error);
+                document.getElementById('userBalance').textContent = "Error";
+            }
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', loadDashboardData);
+    </script>
+</body>
+</html>
