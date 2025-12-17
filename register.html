@@ -133,23 +133,29 @@
             }
         });
 
-        // Registration form handler
+         // Registration form handler
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
            
-            const registerBtn = document.getElementById('registerBtn');
+            // 1. Get values from your HTML IDs
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
 
-            // 2. Data Preparation for Django (Snake Case)
+            // 2. Map them to the names Django expects (Snake Case)
             const userData = {
-                username: document.getElementById('username').value, // New Field
-                first_name: document.getElementById('firstName').value, // Changed to snake_case
-                last_name: document.getElementById('lastName').value,   // Changed to snake_case
+                username: document.getElementById('username').value,
                 email: document.getElementById('email').value,
+               
+                // MAP "firstName" (HTML) -> "first_name" (Backend)
+                first_name: document.getElementById('firstName').value,
+               
+                // MAP "lastName" (HTML) -> "last_name" (Backend)
+                last_name: document.getElementById('lastName').value,
+               
+                // MAP "phone" (HTML) -> "phone_number" (Backend)
                 phone_number: document.getElementById('phone').value,
-                password: password,
-                // referral: document.getElementById('referral').value // Uncomment if your backend handles this
+               
+                password: password
             };
 
             // Basic Validation
@@ -158,7 +164,7 @@
                 return;
             }
            
-            // Show loading
+            const registerBtn = document.getElementById('registerBtn');
             registerBtn.classList.add('loading');
             registerBtn.disabled = true;
            
@@ -172,7 +178,7 @@
                         window.location.href = 'login.html';
                     }, 2000);
                 } else {
-                    // Show error from backend (e.g. "Username already taken")
+                    // Show specific error from backend
                     showToast(response.message || 'Registration failed', 'error');
                 }
             } catch (error) {
